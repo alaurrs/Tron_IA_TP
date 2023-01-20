@@ -137,8 +137,10 @@ def GetPossibleMoves(Game):
     # bas
     if (Game.Grille[x][y-1] == 0):
         L.append((0,-1))
+    if (L==[]):
+        L.append((0,0))
     return L
-    
+
 def Play(Game):   
     
     x,y = Game.PlayerX, Game.PlayerY
@@ -146,8 +148,15 @@ def Play(Game):
 
     Game.Grille[x,y] = 2  # laisse la trace de la moto
 
-    y += 1  # on essaye de bouger vers le haut
+    L = GetPossibleMoves(Game)
     
+    # on choisit une direction aléatoire parmi celles disponibles
+    choix = random.randrange(len(L))
+
+    # On assigne la prochaine case au joueur
+    x += L[choix][0]
+    y +=L[choix][1]
+
     v = Game.Grille[x,y]
     
     if v > 0 :
