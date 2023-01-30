@@ -238,8 +238,6 @@ def Action(Game,Direction):
 
 # algorithme de Monte-Carlo
 def MonteCarlo(Game, Direction):
-    # on initialise le total 
-    total = 0
     # on crée une copie du jeu
     GameCopy = Game.copy()
     # on joue la partie
@@ -258,23 +256,7 @@ def Play(Game):
         average.append(MonteCarlo(Game, dir))
     dir = L[average.index(max(average))]
     
-    x,y = Game.PlayerX, Game.PlayerY
-    
-    Game.Grille[x,y] = 2
-    # on effectue le déplacement
-    x += dir[0]
-    y += dir[1]
-
-    v = Game.Grille[x,y]
-    
-    if v > 0 :
-        # collision détectée
-        return True # partie terminée
-    else :
-       Game.PlayerX = x  # valide le déplacement
-       Game.PlayerY = y  # valide le déplacement
-       Game.Score += 1
-       return False   # la partie continue
+    return Action(Game,dir)
      
 
 ################################################################################
