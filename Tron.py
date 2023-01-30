@@ -154,73 +154,126 @@ def GetRandomMove(Game):
 
     return L[random.randrange(len(L))]
 
+repeat = 10000
 
 # Jeu aléatoire pour simuler les parties
-def SimulationPartie(G : Game):
-    while(True):
-        # on récupère la liste des déplacements possibles
-        L = GetPossibleMoves(G)
-        if (L == []):
-            # retourne le nombre de cases parcourues
-            return G.Score
-        random_move = GetRandomMove(G)
-        # on crée le mur
-        G.Grille[G.PlayerX,G.PlayerY] = 2
-        # on assigne la prochaine case au joueur
-        G.PlayerX += random_move[0]
-        G.PlayerY += random_move[1]
-        G.Score += 1
+def SimulationPartie(Game):
+    
+    # on copie les données de départ afin de créer plusieurs parties
+    G = np.tile(Game.Grille,(repeat,1,1))
+    X = np.tile(Game.PlayerX, repeat)
+    Y = np.tile(Game.PlayerY, repeat)
+    S = np.tile(Game.Score, repeat)
+    I = np.arange(repeat) 
+    
+    loop = True
+    while(loop):
+        # créé le mur
+        G[I, X, Y] = 2
+        
+        # initialisation des directions possibles, 
+        # avec une taille pour chacun des vecteurs associés
+        L = np.zeros((repeat,4), dtype = np.int32)
+        sizes = np.zeros(repeat, dtype = np.int32)
+        
+        # Liste les directions
+        
+        # Gauche
+        Left = (G[I, X-1,Y] == 0) *1
+        L[I, sizes] = Left 
+        sizes += Left
+        
+        # Haut
+        Up = (G[I,X,Y+1] == 0) *1
+        L[I,sizes] = Up*2
+        sizes += Up
+        
+        # Droite
+        Right = (G[I,X+1,Y] == 0)*1
+        L[I,sizes] = Right*3
+        sizes =+ Right
+        
+        # Down
+        Down = (G[I, X, Y - 1] == 0)*1
+        L[I,sizes] = Down * 4
+        sizes += Down
+        
+        # on passe les tailles à 0 à 1 afin de ne pas bouger
+        sizes[sizes == 0] = 1
+        
+        # On récupère une direction aléatoire parmi celles disponibles
+        r_dir = np.random.randint(sizes)
+        
+        Choix = L[I,r_dir]
+        
+        
+        # DEPLACEMENT
+        DX = dx[Choix]
+        DY = dy[Choix]
+        DS = ds[Choix]
+        
+        # end game
+        loop = not(np.sum(DS) == 0)
+        X += DX
+        Y += DY
+        S += DS
+        
+    return np.sum(S)
+
+def Action(Game,Direction):
+    x, y = Game.PlayerX, Game.PlayerY
+
+    Game.Grille[x, y] = 2
+
+    x += Direction[0]
+    y += Direction[1]
+
+    if Game.Grille[x, y] > 0:
+        return True
+    else:
+        Game.PlayerX = x
+        Game.PlayerY = y
+        Game.Score += 1
+        return False
 
 # algorithme de Monte-Carlo
-def MonteCarlo(G : Game, nbrParties):
+def MonteCarlo(Game, Direction):
     # on initialise le total 
     total = 0
-    # on fait le nombre de parties demandées par nbrParties
-    for i in range(0,nbrParties):
-        # on crée une copie du jeu
-        GameCopy = G.copy()
-        # on simule une partie
-        total += SimulationPartie(GameCopy)
+    # on crée une copie du jeu
+    GameCopy = Game.copy()
+    # on joue la partie
+    Action(GameCopy, Direction)
     # on retourne le total de la partie
-    return total
+    return SimulationPartie(GameCopy)
 
-# détermine le coup à jouer pour la partie courante à l'aide des fonctions précédentes
-def GetBestMove(G : Game, nbrParties):
-    # on récupère la liste des déplacements possibles
-    L = GetPossibleMoves(G)
-    # sans direction, on lui assigne une aléatoire
-    if len(L) == 0:
-        return GetRandomMove(G)
-    # on détermine le potentiel des déplacements possibles
-    L2 = []
-    for move in L:
-        # on simule une partie
-        L2.append(MonteCarlo(G, nbrParties))
-    print(L2)
-    # on retourne le meilleur déplacement
-    return L[L2.index(max(L2))]
-
-def Play(G : Game):   
+def Play(Game):   
+    L = GetPossibleMoves(Game)
+    average = []
+    # position aléatoire si absence dde direction
+    if L == []:
+        return(1,1)
     
-    x,y = G.PlayerX, G.PlayerY
-
-    G.Grille[x,y] = 2  # laisse la trace de la moto
-
-    # on récupère le meilleur coup possible
-    bestMove = GetBestMove(G,100)
+    for dir in L:
+        average.append(MonteCarlo(Game, dir))
+    dir = L[average.index(max(average))]
+    
+    x,y = Game.PlayerX, Game.PlayerY
+    
+    Game.Grille[x,y] = 2
     # on effectue le déplacement
-    x += bestMove[0]
-    y += bestMove[1]
+    x += dir[0]
+    y += dir[1]
 
-    v = G.Grille[x,y]
+    v = Game.Grille[x,y]
     
     if v > 0 :
         # collision détectée
         return True # partie terminée
     else :
-       G.PlayerX = x  # valide le déplacement
-       G.PlayerY = y  # valide le déplacement
-       G.Score += 1
+       Game.PlayerX = x  # valide le déplacement
+       Game.PlayerY = y  # valide le déplacement
+       Game.Score += 1
        return False   # la partie continue
      
 
