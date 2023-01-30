@@ -154,7 +154,7 @@ def GetRandomMove(Game):
 
     return L[random.randrange(len(L))]
 
-repeat = 10000
+repeat = 30000
 
 # Jeu aléatoire pour simuler les parties
 def SimulationPartie(Game):
@@ -179,22 +179,27 @@ def SimulationPartie(Game):
         # Liste les directions
         
         # Gauche
-        Left = (G[I, X-1,Y] == 0) *1
+        Left = G[I, X-1,Y]
+        Left = (Left == 0) * 1
         L[I, sizes] = Left 
         sizes += Left
         
         # Haut
-        Up = (G[I,X,Y+1] == 0) *1
+        Up = G[I,X,Y+1]
+        Up = (Up == 0) * 1
         L[I,sizes] = Up*2
         sizes += Up
         
         # Droite
-        Right = (G[I,X+1,Y] == 0)*1
-        L[I,sizes] = Right*3
-        sizes =+ Right
+        Right = G[I, X + 1, Y]
+        Right = (Right == 0) * 1
+
+        L[I, sizes] = Right * 3
+        sizes += Right
         
         # Down
-        Down = (G[I, X, Y - 1] == 0)*1
+        Down = G[I, X, Y - 1]
+        Down = (Down == 0) * 1
         L[I,sizes] = Down * 4
         sizes += Down
         
@@ -213,7 +218,8 @@ def SimulationPartie(Game):
         DS = ds[Choix]
         
         # end game
-        loop = not(np.sum(DS) == 0)
+        if np.sum(DS) == 0:
+            loop = False
         X += DX
         Y += DY
         S += DS
@@ -238,6 +244,7 @@ def Action(Game,Direction):
 
 # algorithme de Monte-Carlo
 def MonteCarlo(Game, Direction):
+    total = 0
     # on crée une copie du jeu
     GameCopy = Game.copy()
     # on joue la partie
@@ -249,7 +256,7 @@ def Play(Game):
     L = GetPossibleMoves(Game)
     average = []
     # position aléatoire si absence dde direction
-    if L == []:
+    if len(L) == 0:
         return(1,1)
     
     for dir in L:
