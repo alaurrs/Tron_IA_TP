@@ -6,6 +6,12 @@ import copy
 #################################################################################
 #
 #   Données de partie
+dx = np.array([0, -1, 0, 1, 0], dtype=np.int32)
+dy = np.array([0, 0, 1, 0, -1], dtype=np.int32)
+
+# scores associés à chaque déplacement
+ds = np.array([0, 1, 1, 1, 1], dtype=np.int32)
+
 
 Data = [   [1,1,1,1,1,1,1,1,1,1,1,1,1],
            [1,0,0,0,0,0,0,0,0,0,0,0,1],
@@ -22,7 +28,7 @@ Data = [   [1,1,1,1,1,1,1,1,1,1,1,1,1],
            [1,0,0,0,0,0,0,0,0,0,0,0,1],
            [1,0,0,0,0,0,0,0,0,0,0,0,1],
            [1,0,0,0,0,0,0,0,0,0,0,0,1],
-           [1,1,0,0,0,0,0,0,0,0,0,0,1],
+           [1,0,0,0,0,0,0,0,0,0,0,0,1],
            [1,1,1,1,1,1,1,1,1,1,1,1,1] ]
 
 GInit  = np.array(Data,dtype=np.int8)
@@ -43,6 +49,7 @@ class Game:
     def copy(self): 
         return copy.deepcopy(self)
 
+# initialisation de la partie
 GameInit = Game(GInit,3,5)
 
 ##############################################################
@@ -137,35 +144,83 @@ def GetPossibleMoves(Game):
     # bas
     if (Game.Grille[x][y-1] == 0):
         L.append((0,-1))
-    if (L==[]):
-        L.append((0,0))
     return L
 
-def Play(Game):   
-    
-    x,y = Game.PlayerX, Game.PlayerY
-    print(x,y)
-
-    Game.Grille[x,y] = 2  # laisse la trace de la moto
-
+# retourne un déplacement aléatoire parmi ceux possibles
+def GetRandomMove(Game):
     L = GetPossibleMoves(Game)
+    if L == []:
+        L = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+
+    return L[random.randrange(len(L))]
+
+
+# Jeu aléatoire pour simuler les parties
+def SimulationPartie(G : Game):
+    while(True):
+        # on récupère la liste des déplacements possibles
+        L = GetPossibleMoves(G)
+        if (L == []):
+            # retourne le nombre de cases parcourues
+            return G.Score
+        random_move = GetRandomMove(G)
+        # on crée le mur
+        G.Grille[G.PlayerX,G.PlayerY] = 2
+        # on assigne la prochaine case au joueur
+        G.PlayerX += random_move[0]
+        G.PlayerY += random_move[1]
+        G.Score += 1
+
+# algorithme de Monte-Carlo
+def MonteCarlo(G : Game, nbrParties):
+    # on initialise le total 
+    total = 0
+    # on fait le nombre de parties demandées par nbrParties
+    for i in range(0,nbrParties):
+        # on crée une copie du jeu
+        GameCopy = G.copy()
+        # on simule une partie
+        total += SimulationPartie(GameCopy)
+    # on retourne le total de la partie
+    return total
+
+# détermine le coup à jouer pour la partie courante à l'aide des fonctions précédentes
+def GetBestMove(G : Game, nbrParties):
+    # on récupère la liste des déplacements possibles
+    L = GetPossibleMoves(G)
+    # sans direction, on lui assigne une aléatoire
+    if len(L) == 0:
+        return GetRandomMove(G)
+    # on détermine le potentiel des déplacements possibles
+    L2 = []
+    for move in L:
+        # on simule une partie
+        L2.append(MonteCarlo(G, nbrParties))
+    print(L2)
+    # on retourne le meilleur déplacement
+    return L[L2.index(max(L2))]
+
+def Play(G : Game):   
     
-    # on choisit une direction aléatoire parmi celles disponibles
-    choix = random.randrange(len(L))
+    x,y = G.PlayerX, G.PlayerY
 
-    # On assigne la prochaine case au joueur
-    x += L[choix][0]
-    y +=L[choix][1]
+    G.Grille[x,y] = 2  # laisse la trace de la moto
 
-    v = Game.Grille[x,y]
+    # on récupère le meilleur coup possible
+    bestMove = GetBestMove(G,100)
+    # on effectue le déplacement
+    x += bestMove[0]
+    y += bestMove[1]
+
+    v = G.Grille[x,y]
     
     if v > 0 :
         # collision détectée
         return True # partie terminée
     else :
-       Game.PlayerX = x  # valide le déplacement
-       Game.PlayerY = y  # valide le déplacement
-       Game.Score += 1
+       G.PlayerX = x  # valide le déplacement
+       G.PlayerY = y  # valide le déplacement
+       G.Score += 1
        return False   # la partie continue
      
 
@@ -182,7 +237,7 @@ def Partie():
         Affiche(CurrentGame)
         # rappelle la fonction Partie() dans 30ms
         # entre temps laisse l'OS réafficher l'interface
-        Window.after(1000,Partie) 
+        Window.after(100,Partie) 
     else :
         AfficheScore(CurrentGame)
 
